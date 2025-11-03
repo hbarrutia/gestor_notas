@@ -10,7 +10,10 @@ from io import BytesIO
 # Configuración
 # -----------------------
 DB_FILE = "notas_modulos.db"
-TUTOR_PASSWORD = "tutor123"  # Cambia esto si quieres otra contraseña de tutor
+import streamlit as st
+import os
+TUTOR_PASSWORD = st.secrets.get("TUTOR_PASSWORD", "tutor123")
+# TUTOR_PASSWORD = "tutor123"  # Cambia esto si quieres otra contraseña de tutor
 
 PERIODOS = ["Diciembre", "Marzo", "OR1", "OR2"]
 
