@@ -214,7 +214,7 @@ if st.sidebar.button("Entrar / Actualizar sesión"):
         st.session_state["username"] = username.strip()
         st.session_state["role"] = role
         st.sidebar.success(f"Sesión iniciada como {username.strip()} ({role})")
-        st.experimental_rerun()
+        st.rerun()
 
 if "username" not in st.session_state:
     st.info("Introduce nombre y rol en la barra lateral y pulsa 'Entrar / Actualizar sesión' para iniciar.")
