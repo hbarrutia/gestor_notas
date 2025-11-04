@@ -281,7 +281,7 @@ else:
                 ra_config[mod] = temp
                 save_ra_config(ra_config)
                 st.success("RA konfigurazioa gorde da.")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Zuzenketa egin: pisuen batura 100% izan behar da.")
         st.stop()
