@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 import os
+import math
 
 # ===============================
-# CONFIGURACIÓN INICIAL
+# KONFIGURAZIO OROKORRA
 # ===============================
 
-st.set_page_config(page_title="Gestor de Notas", layout="wide")
+st.set_page_config(page_title="Gestor de Notas MGEP", layout="wide")
 
-# Carpeta donde se guardarán los datos
 DATA_DIR = "data"
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
@@ -17,14 +17,13 @@ ALUMNOS_FILE = os.path.join(DATA_DIR, "alumnos.csv")
 NOTAS_FILE = os.path.join(DATA_DIR, "notas.csv")
 
 # ===============================
-# FUNCIONES AUXILIARES
+# FUNTZIO LAGUNGARRIAK
 # ===============================
 
 def cargar_alumnos():
     if os.path.exists(ALUMNOS_FILE):
         return pd.read_csv(ALUMNOS_FILE)
-    else:
-        return pd.DataFrame(columns=["Nombre", "Apellidos", "IDAL", "Estado"])
+    return pd.DataFrame(columns=["Nombre", "Apellidos", "IDAL", "Estado"])
 
 def guardar_alumnos(df):
     df.to_csv(ALUMNOS_FILE, index=False)
@@ -32,27 +31,39 @@ def guardar_alumnos(df):
 def cargar_notas():
     if os.path.exists(NOTAS_FILE):
         return pd.read_csv(NOTAS_FILE)
-    else:
-        return pd.DataFrame(columns=["IDAL", "Modulo", "Evaluacion", "Nota"])
+    return pd.DataFrame(columns=["IDAL", "Modulo", "Evaluacion", "NotaFinal", "Asistencia", "NC"])
 
 def guardar_notas(df):
     df.to_csv(NOTAS_FILE, index=False)
 
 # ===============================
-# ROLES Y USUARIOS
+# MODULUEN ZERRENDA
+# ===============================
+
+modulos = {
+    "Sistema Mekatronikoen Integrazioa": 1,
+    "Sistema Pneumatiko eta Hidraulikoak": 2,
+    "Fabrikazio Prozesuak": 3,
+    "Marrazketa Teknikoa": 4,
+    "Digitalizazioa": 5,
+    "EIP I": 6,
+    "Sistema Elektriko eta Elektronikoak": 7
+}
+
+# ===============================
+# SAIOAREN ROLA
 # ===============================
 
 st.sidebar.title("Gestor de Notas - MGEP")
 rol = st.sidebar.selectbox("Zure rola hautatu", ["Irakaslea", "Tutorea"])
-usuario = st.sidebar.text_input("Zure izena (irakaslea)")
+usuario = st.sidebar.text_input("Zure izena (irakaslea/tutorea)")
 
 # ===============================
-# BLOQUE DEL TUTOR
+# TUTOREAREN BLOKEA
 # ===============================
 
 if rol == "Tutorea":
-    st.header("👩‍🏫 Kudeatu ikasleen zerrenda")
-
+    st.header("👩‍🏫 Ikasleen kudeaketa")
     alumnos_df = cargar_alumnos()
 
     metodo = st.radio("Nola gehitu nahi dituzu ikasleak?", ["Excel fitxategitik", "Eskuzko sarrera"])
@@ -61,83 +72,100 @@ if rol == "Tutorea":
         archivo = st.file_uploader("Igo .xls edo .xlsx fitxategia", type=["xls", "xlsx"])
         if archivo:
             df_nuevo = pd.read_excel(archivo)
-            columnas_esperadas = ["Nombre", "Apellidos", "IDAL", "Estado"]
-            if all(col in df_nuevo.columns for col in columnas_esperadas):
+            beharrezkoak = ["Nombre", "Apellidos", "IDAL", "Estado"]
+            if all(c in df_nuevo.columns for c in beharrezkoak):
                 guardar_alumnos(df_nuevo)
+                alumnos_df = df_nuevo
                 st.success("📥 Ikasleen zerrenda eguneratu da fitxategitik!")
             else:
-                st.error(f"Fitxategiak ez ditu beharrezko zutabeak: {columnas_esperadas}")
+                st.error(f"Fitxategiak zutabe hauek behar ditu: {beharrezkoak}")
     else:
         with st.form("form_alumnos"):
             nombre = st.text_input("Izena")
             apellidos = st.text_input("Abizenak")
-            idal = st.text_input("IDAL (matrikula zenbakia)")
-            estado = st.text_input("Egoera (aktibo, baja...)")
+            idal = st.text_input("IDAL")
+            estado = st.text_input("Egoera (Aktibo/Baja...)")
             submit = st.form_submit_button("Gehitu ikaslea")
             if submit:
-                nuevo = pd.DataFrame([[nombre, apellidos, idal, estado]], columns=["Nombre", "Apellidos", "IDAL", "Estado"])
-                alumnos_df = pd.concat([alumnos_df, nuevo], ignore_index=True)
+                berria = pd.DataFrame([[nombre, apellidos, idal, estado]], columns=["Nombre","Apellidos","IDAL","Estado"])
+                alumnos_df = pd.concat([alumnos_df, berria], ignore_index=True)
                 guardar_alumnos(alumnos_df)
                 st.success(f"{nombre} {apellidos} gehitu da.")
 
-    st.subheader("📋 Uneko ikasleen zerrenda")
-    st.dataframe(alumnos_df)
+    # Beti erakutsi taula behean
+    st.subheader("📋 Ikasleen zerrenda")
+    if not alumnos_df.empty:
+        st.dataframe(alumnos_df)
+    else:
+        st.info("Ez dago ikaslerik oraindik.")
 
 # ===============================
-# BLOQUE DEL PROFESOR
+# IRAKASLEAREN BLOKEA
 # ===============================
 
 elif rol == "Irakaslea":
-    st.header("🧮 Sartu ikasleen notak")
+    st.header("🧮 Noten kudeaketa")
 
     alumnos_df = cargar_alumnos()
-
     if alumnos_df.empty:
-        st.warning("Ez dago ikaslerik erregistratuta. Tutoreak lehenik zerrenda igo behar du.")
+        st.warning("Ez dago ikaslerik. Tutoreak lehenik zerrenda igo behar du.")
         st.stop()
 
-    # --- Módulos con nombres ---
-    modulos = {
-        "Sistema Mekatronikoen Integrazioa": 1,
-        "Sistema Pneumatiko eta Hidraulikoak": 2,
-        "Fabrikazio Prozesuak": 3,
-        "Marrazketa Teknikoa": 4,
-        "Digitalizazioa": 5,
-        "EIP I": 6,
-        "Sistema Elektriko eta Elektronikoak": 7
-    }
-
-    # Selección de alumno y módulo
     alumno = st.selectbox("Aukeratu ikaslea", alumnos_df["Nombre"] + " " + alumnos_df["Apellidos"])
     modulo_nombre = st.selectbox("Aukeratu modulua", list(modulos.keys()))
-    modulo = modulos[modulo_nombre]
-
     evaluacion = st.selectbox("Ebaluazioa", ["Diciembre", "Marzo", "OR1", "OR2"])
-    nota = st.number_input("Sartu nota (0-10)", 0.0, 10.0, step=0.1)
 
-    if st.button("💾 Gorde nota"):
-        notas_df = cargar_notas()
-        idal = alumnos_df.loc[alumnos_df["Nombre"] + " " + alumnos_df["Apellidos"] == alumno, "IDAL"].values[0]
+    # Zenbat RA ditu?
+    num_ras = st.number_input("Zenbat ikas-emaitza (RA) ditu modulu honek?", min_value=1, max_value=10, step=1)
 
-        # Si ya existe nota, la reemplaza
-        notas_df = notas_df[
-            ~((notas_df["IDAL"] == idal) &
-              (notas_df["Modulo"] == modulo) &
-              (notas_df["Evaluacion"] == evaluacion))
-        ]
+    ras = []
+    total_peso = 0
+    for i in range(int(num_ras)):
+        col1, col2 = st.columns(2)
+        with col1:
+            peso = st.number_input(f"RA{i+1} pisua (%)", min_value=0, max_value=100, step=1, key=f"peso_{i}")
+        with col2:
+            nota = st.number_input(f"RA{i+1} nota (0-10)", min_value=0.0, max_value=10.0, step=0.1, key=f"nota_{i}")
+        ras.append((peso, nota))
+        total_peso += peso
 
-        nueva_nota = pd.DataFrame([[idal, modulo, evaluacion, nota]], columns=["IDAL", "Modulo", "Evaluacion", "Nota"])
-        notas_df = pd.concat([notas_df, nueva_nota], ignore_index=True)
-        guardar_notas(notas_df)
+    if total_peso != 100:
+        st.warning(f"⚠️ Pisuen batura {total_peso}% da, 100% izan behar du.")
 
-        st.success(f"{alumno} ikaslearen nota gorde da {modulo_nombre} ({evaluacion}) moduluan.")
+    asistencia = st.number_input("Asistentzia (%)", min_value=0, max_value=100, step=1)
 
-    # --- Mostrar todas las notas ---
-    st.subheader("📊 Noten taula osoa")
+    if st.button("💾 Kalkulatu eta gorde"):
+        if total_peso != 100:
+            st.error("Pisuen batura ez da 100%.")
+        else:
+            if asistencia < 80:
+                nota_final = None
+                nc = True
+            else:
+                nota_final = sum(p * n for p, n in ras) / 100
+                nota_final = int(round(nota_final))
+                nc = False
+
+            idal = alumnos_df.loc[alumnos_df["Nombre"] + " " + alumnos_df["Apellidos"] == alumno, "IDAL"].values[0]
+            notas_df = cargar_notas()
+            notas_df = notas_df[~((notas_df["IDAL"] == idal) & 
+                                  (notas_df["Modulo"] == modulo_nombre) &
+                                  (notas_df["Evaluacion"] == evaluacion))]
+            berria = pd.DataFrame([[idal, modulo_nombre, evaluacion, nota_final, asistencia, nc]],
+                                  columns=["IDAL", "Modulo", "Evaluacion", "NotaFinal", "Asistencia", "NC"])
+            notas_df = pd.concat([notas_df, berria], ignore_index=True)
+            guardar_notas(notas_df)
+
+            if nc:
+                st.warning(f"{alumno} → {modulo_nombre} ({evaluacion}): N.C. (asistentzia {asistencia}%)")
+            else:
+                st.success(f"{alumno} → {modulo_nombre} ({evaluacion}) = {nota_final}")
+
+    st.subheader("📊 Noten taula")
     notas_df = cargar_notas()
     if not notas_df.empty:
-        notas_merged = notas_df.merge(alumnos_df, on="IDAL", how="left")
-        notas_merged["Modulo"] = notas_merged["Modulo"].map({v: k for k, v in modulos.items()})
-        st.dataframe(notas_merged[["Nombre", "Apellidos", "Modulo", "Evaluacion", "Nota"]])
+        merged = notas_df.merge(alumnos_df, on="IDAL", how="left")
+        st.dataframe(merged[["Nombre","Apellidos","Modulo","Evaluacion","NotaFinal","Asistencia","NC"]])
     else:
         st.info("Oraindik ez dago notarik gordeta.")
+
