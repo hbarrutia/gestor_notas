@@ -338,7 +338,25 @@ with col1:
     alumno_id = int(alumno_sel.split(" - ")[0])
     alumno_row = df_alumnos[df_alumnos["id"] == alumno_id].iloc[0]
 with col2:
-    modulo = st.selectbox("Módulo (1-7)", options=list(range(1,8)), index=0)
+    # Diccionario de módulos: número → nombre
+modulos = {
+    1: "Sistema Mekatronikoen Integrazioa",
+    2: "Sistema Pneumatiko eta Hidraulikoak",
+    3: "Fabrikazio Prozesuak",
+    4: "Marrazketa Teknikoa",
+    5: "Digitalizazioa",
+    6: "EIP I",
+    7: "Sistema Elektriko eta Elektronikoak"
+}
+
+# Mostrar nombres pero mantener la clave numérica
+modulo_nombre = st.selectbox(
+    "Aukeratu modulua:",
+    options=list(modulos.keys()),
+    format_func=lambda x: modulos[x]
+)
+modulo = modulo_nombre  # para mantener compatibilidad con el resto del código
+
 
 st.markdown("Define el número de RAs y especifica nombre, peso (%) y las notas para cada periodo.")
 num_ras = st.number_input("Número de RAs", min_value=1, max_value=20, value=3, step=1)
