@@ -157,7 +157,6 @@ elif rol == "Irakaslea":
                 st.error("Pisuen batura 100% izan behar du.")
         st.stop()
     else:
-        # Berrikusi eta editatu aukera
         if st.checkbox("🔁 Ikusi eta editatu RA konfigurazioa"):
             st.subheader(f"{modulo} moduluko RA konfigurazioa editatu")
             ra_temp = []
@@ -207,9 +206,15 @@ elif rol == "Irakaslea":
             nota_final = None
             nc = True
         else:
-            nota_final = sum(p * n for p, n in notas) / 100
-            nota_final = int(round(nota_final))
-            nc = False
+            # Baldintza berria: RA guztiek 5 edo gehiago izan behar dute
+            if any(n < 5 for _, n in notas):
+                nota_final = 4
+                nc = False
+                st.warning("⚠️ RA batean 5etik beherakoa dago: modulua ez da gainditzen (max 4).")
+            else:
+                nota_final = sum(p * n for p, n in notas) / 100
+                nota_final = int(round(nota_final))
+                nc = False
 
         idal = alumnos_df.loc[alumnos_df["Nombre"] + " " + alumnos_df["Apellidos"] == alumno, "IDAL"].values[0]
         notas_df = cargar_notas()
